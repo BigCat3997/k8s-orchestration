@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-blue
+  labels:
+    app: my-app
+    version: v1
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>My App - BLUE</title>
+      <style>body { background-color: #3498db; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; } h1 { font-size: 3em; }</style>
+    </head>
+    <body>
+      <h1>Blue Deployment - Version 1 (nginx:1.24.0)</h1>
+      <p>This is the stable, blue version of the application.</p>
+    </body>
+    </html>
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-green
+  labels:
+    app: my-app
+    version: v1
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>My App - GREEN</title>
+      <style>body { background-color: #2ecc71; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; } h1 { font-size: 3em; }</style>
+    </head>
+    <body>
+      <h1>Green Deployment - Version 2 (nginx:1.25.0)</h1>
+      <p>This is the new, green version currently being tested or deployed.</p>
+    </body>
+    </html>
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-blue
+  labels:
+    app: my-app
+    env: blue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+      env: blue
+  template:
+    metadata:
+      labels:
+        app: my-app
+        env: blue
+        version: v1
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.24.0
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html-volume
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+      volumes:
+        - name: html-volume
+          configMap:
+            name: nginx-blue
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-green
+  labels:
+    app: my-app
+    env: green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+      env: green
+  template:
+    metadata:
+      labels:
+        app: my-app
+        env: green
+        version: v1
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.25.0
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html-volume
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+      volumes:
+        - name: html-volume
+          configMap:
+            name: nginx-green
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-blue-green
+  labels:
+    app: my-app
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  selector:
+    app: my-app
+    env: green
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-blue-green
+  annotations:
+    # nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-blue-green
+                port:
+                  number: 80
