@@ -149,5 +149,5 @@ spec:
       protocol: TCP
   selector:
     app: my-app
-    env: blue
+    env: green
   type: ClusterIP
