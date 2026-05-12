@@ -151,23 +151,3 @@ spec:
     app: my-app
     env: blue
   type: ClusterIP
-
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: nginx-blue-green
-  annotations:
-    # nginx.ingress.kubernetes.io/rewrite-target: /
-spec:
-  ingressClassName: nginx
-  rules:
-    - http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: nginx-blue-green
-                port:
-                  number: 80
