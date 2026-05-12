@@ -149,7 +149,7 @@ spec:
       protocol: TCP
   selector:
     app: my-app
-    env: green
+    env: blue
   type: ClusterIP
 
 ---
