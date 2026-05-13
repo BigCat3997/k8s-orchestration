@@ -1,21 +1,21 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-blue
+  name: nginx-stable-config
   labels:
-    app: my-app
+    app: nginx-canary
     version: v1
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
-      <title>My App - BLUE</title>
+      <title>My App - STABLE V1</title>
       <style>body { background-color: #3498db; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; } h1 { font-size: 3em; }</style>
     </head>
     <body>
-      <h1>Blue Deployment - Version 1 (nginx:1.24.0)</h1>
-      <p>This is the stable, blue version of the application.</p>
+      <h1>STABLE Deployment - Version 1 (nginx:1.24.0)</h1>
+      <p>This is the stable, blue version (90% traffic).</p>
     </body>
     </html>
 
@@ -23,21 +23,21 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-green
+  name: nginx-canary-config
   labels:
-    app: my-app
-    version: v1
+    app: nginx-canary
+    version: v2
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
-      <title>My App - GREEN</title>
+      <title>My App - CANARY V2</title>
       <style>body { background-color: #2ecc71; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; } h1 { font-size: 3em; }</style>
     </head>
     <body>
-      <h1>Green Deployment - Version 2 (nginx:1.25.0)</h1>
-      <p>This is the new, green version currently being tested or deployed.</p>
+      <h1>CANARY Deployment - Version 2 (nginx:1.25.0)</h1>
+      <p>This is the new, green version (10% traffic).</p>
     </body>
     </html>
 
@@ -45,21 +45,19 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-blue
+  name: nginx-stable-deployment
   labels:
-    app: my-app
-    env: blue
+    app: nginx-canary
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app: my-app
-      env: blue
+      app: nginx-canary
+      version: v1
   template:
     metadata:
       labels:
-        app: my-app
-        env: blue
+        app: nginx-canary
         version: v1
     spec:
       containers:
@@ -67,18 +65,6 @@ spec:
           image: nginx:1.24.0
           ports:
             - containerPort: 80
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 10
-            periodSeconds: 10
           volumeMounts:
             - name: html-volume
               mountPath: /usr/share/nginx/html/index.html
@@ -86,46 +72,32 @@ spec:
       volumes:
         - name: html-volume
           configMap:
-            name: nginx-blue
+            name: nginx-stable-config
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-green
+  name: nginx-canary-deployment
   labels:
-    app: my-app
-    env: green
+    app: nginx-canary
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-app
-      env: green
+      app: nginx-canary
+      version: v2
   template:
     metadata:
       labels:
-        app: my-app
-        env: green
-        version: v1
+        app: nginx-canary
+        version: v2
     spec:
       containers:
         - name: nginx
           image: nginx:1.25.0
           ports:
             - containerPort: 80
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 10
-            periodSeconds: 10
           volumeMounts:
             - name: html-volume
               mountPath: /usr/share/nginx/html/index.html
@@ -133,21 +105,20 @@ spec:
       volumes:
         - name: html-volume
           configMap:
-            name: nginx-green
+            name: nginx-canary-config
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-blue-green
+  name: nginx-canary-service
   labels:
-    app: my-app
+    app: nginx-canary
 spec:
   ports:
     - port: 80
       targetPort: 80
       protocol: TCP
   selector:
-    app: my-app
-    env: blue
+    app: nginx-canary
   type: ClusterIP
